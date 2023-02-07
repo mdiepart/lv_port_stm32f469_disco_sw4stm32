@@ -77,8 +77,8 @@ static void Error_Handler(void);
  **********************/
 
 
-DSI_HandleTypeDef hdsi_eval;
-LTDC_HandleTypeDef hltdc_eval;
+DSI_HandleTypeDef tft_hdsi_eval;
+LTDC_HandleTypeDef tft_hltdc_eval;
 
 #if TFT_USE_GPU != 0
 static DMA2D_HandleTypeDef     Dma2dHandle;
@@ -279,9 +279,9 @@ static void LCD_Config(void)
 	/*************************DSI Initialization***********************************/
 
 	/* Base address of DSI Host/Wrapper registers to be set before calling De-Init */
-	hdsi_eval.Instance = DSI;
+	tft_hdsi_eval.Instance = DSI;
 
-	HAL_DSI_DeInit(&(hdsi_eval));
+	HAL_DSI_DeInit(&(tft_hdsi_eval));
 
 	#if !defined(USE_STM32469I_DISCO_REVA)
 		dsiPllInit.PLLNDIV  = 125;
@@ -295,12 +295,12 @@ static void LCD_Config(void)
 	laneByteClk_kHz = 62500; /* 500 MHz / 8 = 62.5 MHz = 62500 kHz */
 
 	/* Set number of Lanes */
-	hdsi_eval.Init.NumberOfLanes = DSI_TWO_DATA_LANES;
+	tft_hdsi_eval.Init.NumberOfLanes = DSI_TWO_DATA_LANES;
 
 	/* TXEscapeCkdiv = f(LaneByteClk)/15.62 = 4 */
-	hdsi_eval.Init.TXEscapeCkdiv = laneByteClk_kHz/15620;
+	tft_hdsi_eval.Init.TXEscapeCkdiv = laneByteClk_kHz/15620;
 
-	HAL_DSI_Init(&(hdsi_eval), &(dsiPllInit));
+	HAL_DSI_Init(&(tft_hdsi_eval), &(dsiPllInit));
 
 	/* Timing parameters for all Video modes
 	*/
@@ -362,7 +362,7 @@ static void LCD_Config(void)
 	hdsivideo_handle.LPVerticalSyncActiveEnable = DSI_LP_VSYNC_ENABLE; /* Allow sending LP commands during VSync = VSA period */
 
 	/* Configure DSI Video mode timings with settings set above */
-	HAL_DSI_ConfigVideoMode(&(hdsi_eval), &(hdsivideo_handle));
+	HAL_DSI_ConfigVideoMode(&(tft_hdsi_eval), &(hdsivideo_handle));
 
 	/* Configure DSI PHY HS2LP and LP2HS timings */
 	PhyTimings.ClockLaneHS2LPTime = 35;
@@ -371,20 +371,20 @@ static void LCD_Config(void)
 	PhyTimings.DataLaneLP2HSTime = 35;
 	PhyTimings.DataLaneMaxReadTime = 0;
 	PhyTimings.StopWaitTime = 10;
-	HAL_DSI_ConfigPhyTimer(&hdsi_eval, &PhyTimings);
+	HAL_DSI_ConfigPhyTimer(&tft_hdsi_eval, &PhyTimings);
 
 	/*************************End DSI Initialization*******************************/
 	/************************LTDC Initialization***********************************/
 
 	/* Timing Configuration */
-	hltdc_eval.Init.HorizontalSync = (HSA - 1);
-	hltdc_eval.Init.AccumulatedHBP = (HSA + HBP - 1);
-	hltdc_eval.Init.AccumulatedActiveW = (lcd_x_size + HSA + HBP - 1);
-	hltdc_eval.Init.TotalWidth = (lcd_x_size + HSA + HBP + HFP - 1);
+	tft_hltdc_eval.Init.HorizontalSync = (HSA - 1);
+	tft_hltdc_eval.Init.AccumulatedHBP = (HSA + HBP - 1);
+	tft_hltdc_eval.Init.AccumulatedActiveW = (lcd_x_size + HSA + HBP - 1);
+	tft_hltdc_eval.Init.TotalWidth = (lcd_x_size + HSA + HBP + HFP - 1);
 
 	/* Initialize the LCD pixel width and pixel height */
-	hltdc_eval.LayerCfg->ImageWidth  = lcd_x_size;
-	hltdc_eval.LayerCfg->ImageHeight = lcd_y_size;
+	tft_hltdc_eval.LayerCfg->ImageWidth  = lcd_x_size;
+	tft_hltdc_eval.LayerCfg->ImageHeight = lcd_y_size;
 
 
 	/* LCD clock configuration */
@@ -399,21 +399,21 @@ static void LCD_Config(void)
 	HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct);
 
 	/* Background value */
-	hltdc_eval.Init.Backcolor.Blue = 0;
-	hltdc_eval.Init.Backcolor.Green = 0;
-	hltdc_eval.Init.Backcolor.Red = 0;
-	hltdc_eval.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
-	hltdc_eval.Instance = LTDC;
+	tft_hltdc_eval.Init.Backcolor.Blue = 0;
+	tft_hltdc_eval.Init.Backcolor.Green = 0;
+	tft_hltdc_eval.Init.Backcolor.Red = 0;
+	tft_hltdc_eval.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
+	tft_hltdc_eval.Instance = LTDC;
 
 	/* Get LTDC Configuration from DSI Configuration */
-	HAL_LTDCEx_StructInitFromVideoConfig(&(hltdc_eval), &(hdsivideo_handle));
+	HAL_LTDCEx_StructInitFromVideoConfig(&(tft_hltdc_eval), &(hdsivideo_handle));
 
 	/* Initialize the LTDC */
-	HAL_LTDC_Init(&hltdc_eval);
+	HAL_LTDC_Init(&tft_hltdc_eval);
 
 	/* Enable the DSI host and wrapper after the LTDC initialization
 	 To avoid any synchronization issue, the DSI shall be started after enabling the LTDC */
-	HAL_DSI_Start(&(hdsi_eval));
+	HAL_DSI_Start(&(tft_hdsi_eval));
 
 	/************************End LTDC Initialization*******************************/
 
@@ -444,12 +444,12 @@ static void LCD_Config(void)
 	pLayerCfg.ImageHeight = TFT_VER_RES;
 
 	 /* Configure the LTDC */
-	if(HAL_LTDC_Init(&hltdc_eval) != HAL_OK)
+	if(HAL_LTDC_Init(&tft_hltdc_eval) != HAL_OK)
 	{
 		/* Initialization Error */
 		Error_Handler();
 	}
-	HAL_LTDC_ConfigLayer(&hltdc_eval, &pLayerCfg, 0);
+	HAL_LTDC_ConfigLayer(&tft_hltdc_eval, &pLayerCfg, 0);
 	/********************** End Layer Configuration ********************************/
 }
 
@@ -536,7 +536,7 @@ static void DMA2D_Config(void)
   */
 void LTDC_IRQHandler(void)
 {
-  HAL_LTDC_IRQHandler(&hltdc_eval);
+  HAL_LTDC_IRQHandler(&tft_hltdc_eval);
 }
 
 
